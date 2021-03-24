@@ -5,7 +5,9 @@ var readline = require('readline');
 const { RIPEMD160 } = require('crypto-js');
 var rl = readline.createInterface(process.stdin, process.stdout);
 const blocksmined = require('./storeblock.json');
+const txind = require('./transactionindex.json');
 
+const pen = require('./pendingtransactions.json');
 
 
 
@@ -27,7 +29,7 @@ var privateKey ;
 
     
     var trans = [{"From":"","To":"","amount":0,"timestamp":""},
-                {"signature":""}];
+                {"signature":""},{"index":0},{"confirm":"no"}];
 
 
     function SetTransaction(from, to, amount, privateKey, date){
@@ -66,7 +68,17 @@ var privateKey ;
         const sig = signingKey.sign(hashtx,'base64');
         const signature = sig.toDER('hex');
         trans[1].signature = signature;
+        
+        ind = txind[0].index;
+        trans[2].index = ind;
 
+        
+    txind[0]['index'] = txind[0]['index'] + 1;
+    console.log(txind[0]['index'] + "index here")
+    fs.writeFile('./transactionindex.json', JSON.stringify(txind), err => {
+        if (err) console.log(err)
+        else console.log("index updated");
+    });
 
         //console.log(isValid(transaction));
         //console.log(getBalance(transaction[0]['From']));
@@ -79,6 +91,8 @@ var privateKey ;
         
         if(isValid(transaction)){
             
+
+
             data.push(transaction);
         fs.writeFile('./pendingtransactions.json',JSON.stringify(data),err =>{
             

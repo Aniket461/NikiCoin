@@ -5,6 +5,11 @@ var data = require('./pendingtransactions.json');
 var minedtrans = require('./blockedtransactions.json');
 var blockindex = require('./blockindex.json');
 var blocksmined = require('./storeblock.json');
+const merkle = require('merkle');
+const lockfile = require('proper-lockfile');
+const pen = require('./pendingtransactions.json');
+const txind = require('./transactionindex.json');
+
 
 
 
@@ -26,10 +31,17 @@ function Addprocessdata(data) {
     else{
 
     while (inc<4) {
+
+        console.log(JSON.stringify(data[0][3].confirm))
+        if(JSON.stringify(data[0][3].confirm) === 'yes'){
         
             procdata.push(data[0]);
             data.splice(0, 1)
             inc++;
+        }
+        else{
+            continue;
+        }
     
     }
 
@@ -58,6 +70,8 @@ class Block {
         this.previoushash = previoushash;
         this.hash = this.calculateHash();
         this.nonce = 0;
+        this.merkleroot = '';
+        this.timestamp = '';
 
     }
 
@@ -116,14 +130,12 @@ class BlockChain {
         blocksmined.push(newBlock);
         console.log("New block is:- " + JSON.stringify(newBlock) + "\n");
 
-
-
     }
 
 
-    MinePendingTransaction(miningRewardAddress, blockindexpost, hash, nonce){
+    MinePendingTransaction(miningRewardAddress, blockindexpost, hash, nonce, transactions){
 
-        let block = new Block(blockindexpost,procdata, this.getLatestBlock().hash);
+        let block = new Block(blockindexpost,transactions, this.getLatestBlock().hash);
         //block.mineBlock(this.difficulty);
         block.hash = hash;
         block.nonce = nonce;
@@ -131,43 +143,151 @@ class BlockChain {
         this.chain.push(block);
         blocksmined.push(block);
 
-        for(var i = 0;i<procdata.length;i++){
-            minedtrans.push(procdata[i]);
-        }
+        var array1=[];
+        
 
-        var trans = [
+        //console.log("procdata here--"+JSON.stringify(procdata));
+        
+        var inc = 0;
+
+        while(inc < transactions.length){
+
+            var c = 0;
+
+
+            for(var i = 0;i<data.length;i++){
+                if(transactions[inc][2].index == pen[i][2].index){
+
+                    minedtrans.push(transactions[inc]);
+                    data.splice(i,1);
+                    break;
+
+                }
+            }
+            inc++;
+            //minedtrans.push(procdata[i]);
+        }
+        
+var array1 = [];
+
+    
+    transactions.forEach((b)=>{
+        array1.push(JSON.stringify(b[0]));
+    });
+
+
+    console.log(array1);
+
+    var merklerootans = merkle('sha256').sync(array1);
+    block.merkleroot = merklerootans.root();
+    array1 = [];
+    block.timestamp = Date.now();
+    
+
+    //console.log(blocks[i].index+"--"+merklerootans.root());
+
+    var trans;
+if(pen.length==0){
+
+    console.log(JSON.stringify(minedtrans));
+
+    trans = [
+        {
+            "From": "System",
+            "To": miningRewardAddress,
+            "amount": this.miningReward,
+            "timestamp": Date.now()
+            
+        },
+        {
+            "signature": "null"
+        },
+        {
+            "index": txind[0]['index'],
+        },
+        {
+            "confirm":"yes"
+        }
+    ];
+    
+    txind[0]['index'] = txind[0]['index'] + 1;
+    console.log(txind[0]['index'] + "index here")
+    fs.writeFile('./transactionindex.json', JSON.stringify(txind), err => {
+        if (err) console.log(err)
+        else console.log("index updated");
+    });
+
+}
+else{
+
+        trans = [
             {
-                "From": "null",
+                "From": "System",
                 "To": miningRewardAddress,
-                "amount": "100",
+                "amount": this.miningReward,
                 "timestamp": Date.now()
                 
             },
             {
                 "signature": "null"
+            },
+            {
+                "index": txind[0]['index'],
+            },
+            {
+                "confirm":"yes"
             }
         ];
 
+        txind[0]['index'] = txind[0]['index'] + 1;
+    console.log(txind[0]['index'] + "index here")
+    fs.writeFile('./transactionindex.json', JSON.stringify(txind), err => {
+        if (err) console.log(err)
+        else console.log("index updated");
+    });
+
+
+    }
         data.push(trans);
+
+        lockfile.lock('./blockedtransactions.json').then(()=>{
+
+            fs.writeFile('./blockedtransactions.json', JSON.stringify(minedtrans), err => {
+                if (err) console.log(err);
+                console.log("Updated!");
+            });
+
+            return lockfile.unlock('./blockedtransactions.json');
+        });
         
-    fs.writeFile('./blockedtransactions.json', JSON.stringify(minedtrans), err => {
-        if (err) console.log(err);
-        console.log("Updated!");
-    })
+
+        
+        lockfile.lock('./pendingtransactions.json').then(()=>{
 
     
-    fs.writeFile('./pendingtransactions.json', JSON.stringify(data), err => {
-        if (err) console.log(err);
-        console.log("Updated!");
-    })
+            fs.writeFile('./pendingtransactions.json', JSON.stringify(data), err => {
+                if (err) console.log(err);
+                console.log("Updated!");
+            });
+            return lockfile.unlock('./pendingtransactions.json');
+        })
 
     
+        lockfile.lock('./storeblock.json').then(()=>{
 
+            
     fs.writeFile('./storeblock.json', JSON.stringify(blocksmined), err => {
         if (err) console.log(err);
 
         console.log("Blocks added");
-    })
+    });
+    return lockfile.unlock('./storeblock.json');
+
+
+        });
+
+
+    
 
 
     blockindex[0]['index'] = blockindex[0]['index'] + 1;
@@ -272,7 +392,7 @@ function getBalance(address){
 
 
 
-function MiningFunction(mineraddress, blockindexpost, hash,nonce){
+function MiningFunction(mineraddress, blockindexpost, hash,nonce, transactions){
 
 
     console.log("===================")
@@ -291,16 +411,16 @@ function MiningFunction(mineraddress, blockindexpost, hash,nonce){
     let nikicoin = new BlockChain();
 
 
-    Addprocessdata(data);
+    //Addprocessdata(data);
 
 //console.log(procdata);
 //console.log(data.length);
 //console.log(data);
 
-if (procdata.length > 0) {
+if (transactions.length > 0) {
     const cdate = Date.UTC();
     console.log("starting mining.... \n" + Date());
-    nikicoin.MinePendingTransaction(mineraddress,blockindexpost, hash, nonce);
+    nikicoin.MinePendingTransaction(mineraddress,blockindexpost, hash, nonce,transactions);
     console.log("Mining Ended at: " + Date());
 
 //     console.log();

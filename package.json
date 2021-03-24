@@ -1,0 +1,34 @@
+{
+  "name": "nikicoin",
+  "version": "1.0.0",
+  "description": "\"# NikiCoin\"",
+  "main": "index.js",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "crypto-js": "^4.0.0",
+    "elliptic": "^6.5.4",
+    "express": "^4.17.1",
+    "fs": "^0.0.1-security",
+    "merkle": "^0.6.0",
+    "mongodb": "^3.6.5",
+    "mongoose": "^5.12.1",
+    "os": "^0.1.1",
+    "proper-lockfile": "^4.1.2",
+    "utf-8": "^2.0.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aniket461/NikiCoin.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Aniket461/NikiCoin/issues"
+  },
+  "homepage": "https://github.com/Aniket461/NikiCoin#readme"
+}
