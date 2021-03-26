@@ -20,48 +20,6 @@ var procdata = [];
 var inc = 0;
 
 
-
-
-function Addprocessdata(data) {
-
-
-    if(data.length <4){
-        console.log("There are not enough transactions to be mined!!");
-    }
-    else{
-
-    while (inc<4) {
-
-        console.log(JSON.stringify(data[0][3].confirm))
-        if(JSON.stringify(data[0][3].confirm) === 'yes'){
-        
-            procdata.push(data[0]);
-            data.splice(0, 1)
-            inc++;
-        }
-        else{
-            continue;
-        }
-    
-    }
-
-    // fs.writeFile('./pendingtransactions.json', JSON.stringify(data),err=>{
-    //     if(err) console.log(err)
-    //     else console.log("Done!");
-    // })
-
-    }
-
-
-    // for(var i= 0;i<data.length;i++){
-    //     if(data[i].blocked == "No"){
-
-    //         procdata.push(data[i]);
-    //          delete data[i]
-    //     }
-    // }
-}
-
 class Block {
     constructor(index, transactions, previoushash = '') {
 
@@ -410,26 +368,12 @@ function MiningFunction(mineraddress, blockindexpost, hash,nonce, transactions){
 
     let nikicoin = new BlockChain();
 
-
-    //Addprocessdata(data);
-
-//console.log(procdata);
-//console.log(data.length);
-//console.log(data);
-
 if (transactions.length > 0) {
     const cdate = Date.UTC();
     console.log("starting mining.... \n" + Date());
     nikicoin.MinePendingTransaction(mineraddress,blockindexpost, hash, nonce,transactions);
     console.log("Mining Ended at: " + Date());
 
-//     console.log();
-// if(isChainValidJson()){
-//     console.log("\nThe block chain is in VALID state");
-// }
-// else{
-//     console.log("\nThe blockchain is in INVALID state");
-// }
 
 
     return({"data":"blockmined"});
@@ -439,7 +383,6 @@ else {
     return({"data":"not enough transactions to Block"});
 }
 
-//console.log("The balance for given address is:-"+getBalance("nikiaddress"));
     }
 }
 

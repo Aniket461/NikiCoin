@@ -38,18 +38,18 @@ async function getBalance(address){
     }
 
 
-    for(const tran of pentx){
+    // for(const tran of pentx){
 
-        // if(JSON.stringify(tran[0]['To']).replace('"'," ").replace('"'," ").trim() === address){
-        //     balance = balance +    parseFloat(JSON.stringify(tran[0]['amount']).replace('"'," ").replace('"'," ").trim());
-        //     console.log("recived "+balance);
-        // }
+    //     // if(JSON.stringify(tran[0]['To']).replace('"'," ").replace('"'," ").trim() === address){
+    //     //     balance = balance +    parseFloat(JSON.stringify(tran[0]['amount']).replace('"'," ").replace('"'," ").trim());
+    //     //     console.log("recived "+balance);
+    //     // }
 
-        if(JSON.stringify(tran['From']).replace('"'," ").replace('"'," ").trim() === address){
-            balance = balance - parseFloat(JSON.stringify(tran['amount']).replace('"'," ").replace('"'," ").trim());
-            console.log("spent "+balance);
-        }
-    }
+    //     if(JSON.stringify(tran['From']).replace('"'," ").replace('"'," ").trim() === address){
+    //         balance = balance - parseFloat(JSON.stringify(tran['amount']).replace('"'," ").replace('"'," ").trim());
+    //         console.log("spent "+balance);
+    //     }
+    // }
 
     //console.log(balance);
 
@@ -58,4 +58,4 @@ async function getBalance(address){
 
 //GetNikiCoinAddress();
 
-module.exports.getbalance = getBalance;
+module.exports.confirmbalance = getBalance;

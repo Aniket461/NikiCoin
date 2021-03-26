@@ -9,16 +9,22 @@ const pendingTransactions = require('./pendingtransactions.json');
 const blocks = require('./storeblock.json');
 const SetTransaction = require('./createtransactions');
 
-const mineblock = require('./index');
+const mineblock = require('./miningpage');
 const GetData = require('./GetPendingTrans');
 const difficulty = require('./Difficulty.json');
 const pendingapi = require('./pendingtransactions.json');
 const lockfile = require('proper-lockfile');
 const fs = require('fs');
-
 const User = require('./models/user');
-
 const mongoose = require('mongoose');
+const pendingTransactionsSchema = require('./models/pendingtransactions');
+const AllTransactions = require('./models/transactions');
+
+const block1 = require('./models/block');
+const status = require('./models/status');
+const confirmbalance = require('./ConfirmBalance');
+
+
 
 var url = "mongodb+srv://Aniket461:Australia20@nikicoin.boz57.mongodb.net/NikiCoin?retryWrites=true&w=majority";
 
@@ -56,16 +62,21 @@ app.get('/', (res, req, nxt) => {
 
 //Get all the confirmed or blocked transactions
 app.get('/transactions',(req,res)=>{
+    
 
-    res.send(blockedtransactions);
+    AllTransactions.Transaction.find({},(err,data)=>{
+        
+        transactions = JSON.stringify(data);
+        res.send(JSON.parse(transactions));
+    })
 
 });
 
 //Get balance of the any given address
-app.post('/getbalance', (req,res)=>{
+app.post('/getbalance', async (req,res)=>{
 
     console.log(req.body);
-    var balance = getbalance.getbalance(req.body.address)
+    var balance = await getbalance.getbalance(req.body.address)
     console.log(balance);
     res.send(balance.toString());
 
@@ -84,30 +95,41 @@ app.post('/keygenerator',(req,res)=>{
 
 
 //Get all the pending transactions
-app.get('/pendingtransactions', (req,res)=>{
+app.get('/pendingtransactions', async (req,res)=>{
 
-    res.send(pendingTransactions);
+
+    var pending;
+
+    await pendingTransactionsSchema.PendingTransaction.find({},(err,data)=>{
+
+        pending = JSON.stringify(data);
+        res.send(JSON.parse(pending));
+
+
+    });
 
 });
 
 
 //Get all the blocks
 
-app.get('/getblocks',(req,res)=>{
+app.get('/getblocks',async (req,res)=>{
 
-res.send(blocks);
+    var blocksm = await block1.Block.find({});
+
+res.send(blocksm);
 
 })
 
 //get single blocks
 
-app.get('/getblocks/:height', (req,res)=>{
+app.get('/getblocks/:height',async (req,res)=>{
 
-    for(const b of blocks){
-        if(b['index'] == req.params.height){
-            res.send(b);
-        }
-    }
+var singleb = await block1.Block.find({'index':req.params.height});
+
+            res.send(await singleb);
+        
+    
     //res.send(req.params.height);
 
 });
@@ -134,9 +156,17 @@ app.post('/createtransaction',async(req,res)=>{
 });
 //Get Data
 
-app.get('/getdata',(req,res)=>{
-    console.log("pening trans:-"+pendingTransactions);
-    res.send(GetData.GetData(pendingTransactions));
+app.get('/getdata',async (req,res)=>{
+
+    //console.log("pening trans:-"+pendingTransactions);
+
+    pendingTransactionsSchema.PendingTransaction.find({},async (err,data)=>{
+
+        
+    res.send(await GetData.GetData(data));
+
+    });
+
     //delete require.cache['server.js'];
 });
 
@@ -154,41 +184,45 @@ app.post('/mineblock',async(req,res)=>{
     console.log(res.body);
     console.log("The miner address is:",add);
 
-    res.send(await mineblock.MineBlock(add,index,hash,nonce,transactions));
+    res.send(await mineblock.MiningFunction(add,index,hash,nonce,transactions));
 
 
 });
 
 //confirm pending transaction
 
-app.get('/confirm/:id', (req,res)=>{
+app.get('/confirm/:id', async (req,res)=>{
 
     var done = false;
-    pendingapi.forEach(element => {
-        
-        if(element[2].index == req.params.id){
-            element[3].confirm = 'yes';
-            done = true;
-            
-        }
+    
+    var id = req.params.id;
 
+    var tx = await pendingTransactionsSchema.PendingTransaction.find({"_id":id});
+
+    var balance = await confirmbalance.confirmbalance(tx[0]['From']);
+
+    console.log("bbbb "+balance);
+
+    var finalb = balance - tx[0]['amount'];
+    console.log("fbbff "+finalb);
+
+    if(finalb>0){
+        await pendingTransactionsSchema.PendingTransaction.findOneAndUpdate({"_id":id},{$set:{confirm:"yes"}}).then(()=>{
+            done = true;
+        });
+    }
+else{
+    await pendingTransactionsSchema.PendingTransaction.findOneAndUpdate({"_id":id},{$set:{confirm:"discarded"}}).then(()=>{
+        done = true;
     });
+
+
+}
+
 
     if(done){
         
     res.send({"data":"Done"});
-    lockfile.lock('./pendingtransactions.json').then(()=>{
-
-            
-        fs.writeFile('./pendingtransactions.json', JSON.stringify(pendingapi), err => {
-            if (err) console.log(err);
-    
-            console.log("Changed!");
-        });
-        return lockfile.unlock('./pendingtransactions.json');
-    
-    
-            });
     
     }
     else{
@@ -200,33 +234,20 @@ app.get('/confirm/:id', (req,res)=>{
 
 //status 
 
-app.get('/status',(req,res)=>{
+app.get('/status',async (req,res)=>{
 
+    var newstat = await status.Status.find({});
+    res.send(newstat[0]);
     
-    var statusfile = require('./status.json');
-
-    res.send(statusfile[0]);
-
 });
 
-app.post("/status",(req,res)=>{
+app.post("/status",async (req,res)=>{
 
-    var status = req.body.status;
+    var statusc = req.body.status;
     var time = req.body.timestamp;
     var message = req.body.message;
 
-    var statusfile = require('./status.json');
-
-    statusfile[0].status = status;
-    statusfile[0].timestamp = time;
-    statusfile[0].message = message;
-
-    fs.writeFile('./status.json', JSON.stringify(statusfile),(err)=>{
-
-        if(err){console.log(err)}
-        else{console.log("Done Status Check")}
-
-    });
+   var newstat = await status.Status.findOneAndUpdate({'index':1},{$set:{status:statusc,timestamp:time,message:message}});
 
     res.send({"data":"Done"});
 });
@@ -305,9 +326,21 @@ app.post('/login',(req,res)=>{
 });
 
 
+//initial tx
+
+const inn = require('./testing');
+
+app.get('/initial',async (req,res)=>{
+
+    res.send(await inn.Initial());
+
+});
+
 
 //server runs on port 5000
 app.listen( process.env.PORT || 5000,()=>{
 
     console.log("Server is running!");
 });
+
+

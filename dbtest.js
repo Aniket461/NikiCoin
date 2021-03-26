@@ -205,3 +205,72 @@ var Block = mongoose.model('Block',blockSchema);
 Block.find({},(err,data)=>{
     console.log(data[0].transactions[0]);
 });
+
+
+var tran = [
+    {
+        "From": "System",
+        "To": "04217e344706bada084197bdbf5bce08ad0a0c8ef7c6ea7ffcd26ad85a37c34ab782b435711cf5ff12a28dd230cc97839fcae0e10cdd2f800bead748dd650684e2",
+        "amount": 100,
+        "timestamp": 1616425039860
+    },
+    {
+        "signature": "null"
+    },
+    {
+        "index": 46
+    },
+    {
+        "confirm": "yes"
+    }
+]
+
+const Transaction = require('./models/transactions');
+
+// var tx = new Transaction.Transaction({
+//     From: tran[0].From,
+//     To:tran[0].To,
+//     amount:tran[0].amount,
+//     timestamp: tran[0].timestamp,
+//     signature:tran[1].signature,
+//     index:tran[2].index,
+//     confirm:"yes"
+// });
+
+// tx.save((err)=>{
+//     if(err)console.log(err);
+//     else console.log("transaction added");
+// })
+
+
+const indexes = require('./models/indexes');
+
+// var indexadd = indexes.IndexModel({
+//     name:"TransactionIndex",
+//     index:1
+
+// });
+
+// indexadd.save((err)=>{
+//     if(err)console.log(err);
+//     else{console.log("Index Added")}
+// });
+
+var d = 0;
+
+indexes.IndexModel.find({'name':"TransactionIndex"},(err,data)=>{
+
+    console.log(data[0]['index']);
+    d = data[0]['index'];
+    
+console.log(d+1);
+indexes.IndexModel.findOneAndUpdate({'name':"TransactionIndex"}, {$set:{
+    index:d+1
+ }}).then(()=>{
+     console.log("Updated");
+ }).catch((e)=>{
+     console.log(e);
+ });
+
+});
+
